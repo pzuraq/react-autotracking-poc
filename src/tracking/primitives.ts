@@ -1,8 +1,9 @@
 const { max } = Math;
 const { isArray, from: arrayFrom } = Array;
 
-declare const STORAGE_SOURCE: unique symbol;
-declare const CACHE_SOURCE: unique symbol;
+// Used for typing purposes, these should be declare only but that breaks CRA
+const STORAGE_SOURCE: unique symbol = Symbol();
+const CACHE_SOURCE: unique symbol = Symbol();
 
 export interface CacheSource<T = unknown> {
   [CACHE_SOURCE]: T;
@@ -16,29 +17,25 @@ export type Source<T = unknown> = CacheSource<T> | StorageSource<T>;
 
 //////////
 
-export type Revision = number;
+const INITIAL = 1;
+const CONSTANT = 0;
+const UNINITIALIZED = -1;
 
-const enum Revisions {
-  INITIAL = 1,
-  CONSTANT = 0,
-  UNINITIALIZED = -1,
-}
-
-let $REVISION = Revisions.INITIAL;
+let $REVISION = INITIAL;
 
 //////////
 
-export class SourceImpl<T = unknown> implements StorageSource<T>, CacheSource<T> {
-  declare [STORAGE_SOURCE]: T;
-  declare [CACHE_SOURCE]: T;
+export class SourceImpl<T = unknown> {
+  [STORAGE_SOURCE]: T;
+  [CACHE_SOURCE]: T;
 
       // The goal here is that with a new Cache
     //   1. isConst(cache) === false
     //   2. isDirty(cache) === true
     //   3. if the cache is evaluated once, and has no dependencies or only
     //      constant dependencies, it becomes `isConst` true
-  public revision: Revision = Revisions.INITIAL;
-  public valueRevision: Revision = Revisions.UNINITIALIZED;
+  public revision: number = INITIAL;
+  public valueRevision: number = UNINITIALIZED;
 
   constructor(
     public value: T | undefined,
@@ -46,7 +43,7 @@ export class SourceImpl<T = unknown> implements StorageSource<T>, CacheSource<T>
     public compute: (() => T) | null,
   ) {}
 
-  lastChecked = Revisions.UNINITIALIZED;
+  lastChecked = UNINITIALIZED;
 
   deps: SourceImpl<unknown> | SourceImpl<unknown>[] | null = null;
 }
@@ -55,7 +52,7 @@ export function isSourceImpl<T>(cache: Source<T> | unknown): cache is SourceImpl
   return cache instanceof SourceImpl;
 }
 
-function getRevision<T>(cache: SourceImpl<T>): Revision {
+function getRevision<T>(cache: SourceImpl<T>): number {
   let { lastChecked, revision: originalRevision } = cache;
   let revision = originalRevision;
 
@@ -126,7 +123,7 @@ export function isConst<T>(source: Source<T>): boolean {
     `isConst() can only be used on an instance of a cache created with createCache() or a storage created with createStorage(). Called with: ${source}`
   );
 
-  return source.valueRevision === Revisions.CONSTANT;
+  return source.valueRevision === CONSTANT;
 }
 
 ////////
@@ -138,7 +135,7 @@ export function isConst<T>(source: Source<T>): boolean {
   private caches = new Set<SourceImpl<unknown>>();
   private last: SourceImpl<unknown> | null = null;
 
-  maxRevision: number = Revisions.CONSTANT;
+  maxRevision: number = CONSTANT;
 
   add<T>(_cache: SourceImpl<T>) {
     let cache = _cache as SourceImpl<unknown>;
@@ -186,7 +183,7 @@ export function getValue<T>(source: Source<T>): T {
   );
 
   if (isConst(source)) {
-    return source.value;
+    return source.value!;
   }
 
   let { compute } = source;
@@ -210,14 +207,14 @@ export function getValue<T>(source: Source<T>): T {
     CURRENT_TRACKER.add(source);
   }
 
-  return source.value;
+  return source.value!;
 }
 
 ////////
 
 let revalidate: () => void;
 
-export function setRevalidate(fn) {
+export function setRevalidate(fn: () => void) {
   revalidate = fn;
 }
 

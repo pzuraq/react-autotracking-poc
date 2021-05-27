@@ -1,4 +1,4 @@
-import { createStorage, getValue, setValue, Source } from "./primitives";
+import { createStorage, getValue, setValue } from "./primitives";
 
 const ARRAY_GETTER_METHODS = new Set<string | symbol | number>([
   Symbol.iterator,
@@ -39,7 +39,7 @@ class TrackedArrayProxyHandler {
   storage = createStorage(null, () => false);
   boundFns = new Map();
 
-  get(target, prop) {
+  get(target: any, prop: any) {
     let index = convertToInt(prop);
 
     if (index !== null) {
@@ -68,10 +68,10 @@ class TrackedArrayProxyHandler {
     return target[prop];
   }
 
-  set(target, prop, value) {
+  set(target: any, prop: any, value: any) {
     target[prop] = value;
 
-    setValue(this.storage, true);
+    setValue(this.storage, null);
 
     return true;
   }

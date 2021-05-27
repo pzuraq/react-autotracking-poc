@@ -1,12 +1,10 @@
-import React from 'react'
+import React, { ReactNode } from 'react'
 import TrackedArray from '../tracking/array';
 import { CacheSource, getValue, setRevalidate } from '../tracking/primitives';
 
-export const MessageBusContext = React.createContext(null)
-
 class MessageBus {
   #topics = new Map<string, TrackedArray<string>>();
-  #subscribers = [];
+  #subscribers: CacheSource[] = [];
 
   constructor() {
     let scheduled = false;
@@ -26,7 +24,7 @@ class MessageBus {
   #getTopic = (topicKey: string) => {
     let topic = this.#topics.get(topicKey);
 
-    if (topicKey === undefined) {
+    if (topic === undefined) {
       topic = new TrackedArray<string>();
       this.#topics.set(topicKey, topic)
     }
@@ -54,6 +52,8 @@ class MessageBus {
 
 const MESSAGE_BUS = new MessageBus();
 
-export default function Provider({ children }) {
+export const MessageBusContext = React.createContext(MESSAGE_BUS);
+
+export default function Provider({ children }: { children: ReactNode }) {
   return <MessageBusContext.Provider value={MESSAGE_BUS}>{children}</MessageBusContext.Provider>
 }
